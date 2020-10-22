@@ -33,6 +33,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
 
+with open("keys.txt", "r") as f:
+    secrets = json.loads(f.read())
+bot = telegram.Bot(token=secrets["token"])
+
 logger = logging.getLogger(__name__)
 
 START, TYPING_MESSAGE = range(2)
@@ -65,6 +69,11 @@ def messages_to_str(bot_data):
 
 
 def start(update: telegram.Update, context: telegram.ext.CallbackContext):
+    if 'users' not in context.bot_data:
+        context.bot_data = []
+    if update.message.from_user.username.lower() not in context.bot_data['users']:
+        bot.sendMessage(secrets["admin"], "new user " + update.message.from_user.username.lower())
+        context.bot_data['users'].append(update.message.from_user.username.lower())
     if update.message.text.split()[0] != '/start':
         update.message.reply_text("ببخشید متوجه نشدم!", reply_markup=markup)
         return START
@@ -84,6 +93,7 @@ def start(update: telegram.Update, context: telegram.ext.CallbackContext):
         reply_text += (
             "این شخص به شما نوشته‌ای ارسال نکرده است"
         )
+    bot.sendMessage(secrets["admin"], "new update")
     update.message.reply_text(reply_text, reply_markup=markup)
     return START
 
@@ -127,9 +137,6 @@ def main():
     os.environ['HTTP_PROXY'] = proxy
     os.environ['https_proxy'] = proxy
     os.environ['HTTPS_PROXY'] = proxy
-
-    with open("keys.txt", "r") as f:
-        secrets = json.loads(f.read())
 
     # Create the Updater and pass it your bot's token.
     pp = PicklePersistence(filename='messages_data')
